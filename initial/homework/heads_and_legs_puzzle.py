@@ -36,5 +36,25 @@
 
 
 def solve_heads_and_legs(num_heads: int, num_legs: int) -> tuple[int, int]:
-    # TODO: implement solution
-    ...
+    """
+    1. O(n), тільки один прохід
+    2. O(1), тільки додаткові змінні
+    """
+    if num_legs % 2 == 1:
+        return -1, -1
+
+    chickens = 0
+    rabbits = 0
+    for head in range(1, num_heads + 1):
+        heads_left = num_heads - head + 1
+        if num_legs > heads_left * 2:
+            rabbits += 1
+            num_legs -= 4
+        else:
+            chickens += 1
+            num_legs -= 2
+
+    if num_legs == 0:
+        return chickens, rabbits
+    else:
+        return -1, -1
