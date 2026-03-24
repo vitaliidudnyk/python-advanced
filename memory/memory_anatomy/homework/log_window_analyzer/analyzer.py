@@ -42,9 +42,10 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import Deque, TextIO
 
 from memory.memory_anatomy.homework.log_window_analyzer.generator import LogFileGenerator
 
@@ -76,8 +77,8 @@ class LogWindowAnalyzer:
         """
         Відкрити файл та передати файловий потік у метод _process_stream.
         """
-        # TODO: implement solution
-        ...
+        with path.open('r', encoding='utf-8') as stream:
+            return self._process_stream(stream)
 
     def _process_stream(self, stream: TextIO) -> WindowResult:
         """
@@ -94,8 +95,29 @@ class LogWindowAnalyzer:
             - не створювати зайві списки;
             - мінімізувати кількість алокацій.
         """
-        # TODO: implement solution
-        ...
+
+        max_window_sum = 0
+        current_window_sum = 0
+        rows = 0
+        q: Deque[int] = deque(maxlen=self._window_size)
+        for line in stream:
+            if line == '\n':
+                continue
+
+            rows += 1
+            duration_int = self._parse_duration(line)
+
+            if len(q) >= self._window_size:
+                prev = q.popleft()
+                current_window_sum -= prev
+
+            q.append(duration_int)
+            current_window_sum += duration_int
+
+            if current_window_sum > max_window_sum:
+                max_window_sum = current_window_sum
+
+        return WindowResult(max_window_sum, self._window_size, rows)
 
     @staticmethod
     def _parse_duration(line: str) -> int:
@@ -106,8 +128,16 @@ class LogWindowAnalyzer:
         Заборонено:
             - використовувати split(), щоб уникнути зайвих алокацій.
         """
-        # TODO: implement solution
-        ...
+        if line.count(';') != 2:
+            raise ValueError('invalid line')
+
+        start = line.rfind(';') + 1
+        end = len(line) - 1 if line.endswith('\n') else len(line)
+        duration_str = line[start:end]
+        if not duration_str.isdigit():
+            raise ValueError('invalid duration')
+
+        return int(duration_str)
 
 
 def main() -> None:
