@@ -99,7 +99,7 @@ class LogWindowAnalyzer:
         max_window_sum = 0
         current_window_sum = 0
         rows = 0
-        q: Deque[int] = deque(maxlen=self._window_size)
+        q: Deque[int] = deque(maxlen=self._window_size + 1)
         for line in stream:
             if line == '\n':
                 continue
@@ -107,15 +107,15 @@ class LogWindowAnalyzer:
             rows += 1
             duration_int = self._parse_duration(line)
 
-            if len(q) >= self._window_size:
-                prev = q.popleft()
-                current_window_sum -= prev
-
             q.append(duration_int)
             current_window_sum += duration_int
 
-            if current_window_sum > max_window_sum:
-                max_window_sum = current_window_sum
+            if len(q) > self._window_size:
+                prev = q.popleft()
+                current_window_sum -= prev
+
+                if current_window_sum > max_window_sum:
+                    max_window_sum = current_window_sum
 
         return WindowResult(max_window_sum, self._window_size, rows)
 
@@ -128,10 +128,11 @@ class LogWindowAnalyzer:
         Заборонено:
             - використовувати split(), щоб уникнути зайвих алокацій.
         """
-        if line.count(';') != 2:
+        sap = line.rfind(';')
+        if sap == -1:
             raise ValueError('invalid line')
 
-        start = line.rfind(';') + 1
+        start = sap + 1
         end = len(line) - 1 if line.endswith('\n') else len(line)
         duration_str = line[start:end]
         if not duration_str.isdigit():

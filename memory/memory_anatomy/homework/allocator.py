@@ -52,28 +52,22 @@ class Allocator:
         start = self.try_find_memory(size)
         if start == -1:
             return -1
-        else:
-            for i in range(start, size + start):
-                self.memory[i] = alloc_id
-            return start
+
+        for i in range(start, size + start):
+            self.memory[i] = alloc_id
+        return start
 
     def try_find_memory(self, size: int) -> int:
-        left = 0
-        while left <= self.memory_len - size:
-            if self.memory[left] != 0:
-                left += 1
-                continue
+        start = -1
+        for i in range(self.memory_len):
+            if self.memory[i] == 0:
+                if start == -1:
+                    start = i
 
-            right = left
-            while right < left + size:
-                if self.memory[right] == 0:
-                    right += 1
-                else:
-                    left = right + 1
-                    break
-
-            if right - left == size:
-                return left
+                if i - start + 1 >= size:
+                    return start
+            else:
+                start = -1
 
         return -1
 
