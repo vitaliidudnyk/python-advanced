@@ -19,7 +19,7 @@ def _get_field(obj: Any, name: str) -> Any:
 
 
 class TestEventAggregator:
-    @patch('memory.fragments_and_copies.homework_answers.event_aggregator.fake_boto3.client')
+    @patch('memory.fragments_and_copies.homework.event_aggregator.fake_boto3.client')
     def test_run_structure(self, mock_client: MagicMock, mock_s3: MagicMock):
         mock_client.return_value = mock_s3
 
@@ -40,7 +40,7 @@ class TestEventAggregator:
             assert count > 0, f'count must be > 0, got {count}'
             assert len(events) == count, f'events length ({len(events)}) must match count ({count})'
 
-    @patch('memory.fragments_and_copies.homework_answers.event_aggregator.fake_boto3.client')
+    @patch('memory.fragments_and_copies.homework.event_aggregator.fake_boto3.client')
     def test_users_are_aggregated(self, mock_client: MagicMock, mock_s3: MagicMock, test_files: dict[str, list]):
         mock_client.return_value = mock_s3
 
@@ -51,7 +51,7 @@ class TestEventAggregator:
         assert _get_field(_get_field(result, 'u1'), 'count') == len(test_files['data/file1.json'])
         assert _get_field(_get_field(result, 'u1'), 'count') == len(test_files['data/file2.json'])
 
-    @patch('memory.fragments_and_copies.homework_answers.event_aggregator.fake_boto3.client')
+    @patch('memory.fragments_and_copies.homework.event_aggregator.fake_boto3.client')
     def test_timestamp_normalized(self, mock_client: MagicMock, mock_s3: MagicMock):
         mock_client.return_value = mock_s3
 
