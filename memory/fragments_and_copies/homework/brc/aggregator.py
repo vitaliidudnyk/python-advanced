@@ -63,6 +63,7 @@ from pathlib import Path
 from typing import TextIO
 
 from memory.fragments_and_copies.homework.brc.generator import GeneratorConfig, MeasurementsGenerator
+from memory.fragments_and_copies.homework.memory_profiler import memory_profile
 
 
 @dataclass(slots=True)
@@ -78,22 +79,23 @@ class StationStats:
         Створює початкову статистику для нової станції.
         Використовуйте передане значення температури як перший вимір.
         """
-        # TODO: implement solution
-        ...
+        stats = StationStats(value, value, value, 1)
+        return stats
 
     def add(self, value: float) -> None:
         """
         Додає нове температурне значення до статистики станції.
         """
-        # TODO: implement solution
-        ...
+        self.count += 1
+        self.sum_value += value
+        self.min_value = min(self.min_value, value)
+        self.max_value = max(self.max_value, value)
 
     def mean(self) -> float:
         """
         Повертає середнє значення температури для станції.
         """
-        # TODO: implement solution
-        ...
+        return self.sum_value / self.count
 
 
 class MeasurementsAggregator:
@@ -101,15 +103,16 @@ class MeasurementsAggregator:
         """
         Ініціалізує структуру для збереження статистики по станціях.
         """
-        # TODO: implement solution
-        ...
+        self.station_stats = {}
 
+    @memory_profile
     def process_file(self, path: str) -> None:
         """
         Відкриває файл з вимірюваннями та передає його у потокову обробку.
         """
-        # TODO: implement solution
-        ...
+        p = Path(path)
+        with p.open('r', encoding='utf-8') as stream:
+            self._process_stream(stream)
 
     def _process_stream(self, stream: TextIO) -> None:
         """
@@ -118,8 +121,14 @@ class MeasurementsAggregator:
         Кожен рядок має формат:
             <station>;<temperature>
         """
-        # TODO: implement solution
-        ...
+        for line in stream:
+            station, temperature_str = line.split(';', 1)
+            temperature = float(temperature_str)
+
+            if station in self.station_stats:
+                self.station_stats[station].add(temperature)
+            else:
+                self.station_stats[station] = StationStats.create(temperature)
 
     def render_sorted(self) -> dict[str, str]:
         """
@@ -132,8 +141,13 @@ class MeasurementsAggregator:
         - повернути словник:
               station -> "min_value/mean/max_value"
         """
-        # TODO: implement solution
-        ...
+        sorted_keys = sorted(self.station_stats.keys())
+        stations_ret = {}
+        for key in sorted_keys:
+            stats = self.station_stats[key]
+            stations_ret[key] = f'{stats.min_value:.1f}/{stats.mean():.1f}/{stats.max_value:.1f}'
+
+        return stations_ret
 
 
 def main():

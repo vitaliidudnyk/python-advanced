@@ -61,73 +61,85 @@ class CopyOnWriteArray:
         Ініціалізує масив із власним буфером.
         Створює окремий Storage й не ділить його з іншими масивами (назви його _storage).
         """
-        # TODO: implement solution
-        ...
+        if items is None:
+            data: list[Any] = []
+        else:
+            data = list(items)
+
+        self._storage = Storage(data, 1)
 
     def cow_copy(self) -> CopyOnWriteArray:
         """
         Повертає легку копію масиву, що розділяє той самий буфер.
         Копіювання даних не відбувається.
         """
-        # TODO: implement solution
-        ...
+        new_obj = CopyOnWriteArray.__new__(CopyOnWriteArray)
+        new_obj._storage = self._storage
+        self._storage.refcount += 1
+        return new_obj
 
     def __len__(self) -> int:
-        # TODO: implement solution
-        ...
+        return len(self._storage.data)
 
     def __getitem__(self, index: int) -> Any:
         """
         Повертає елемент за індексом.
         Завжди читає напряму зі спільного буфера.
         """
-        # TODO: implement solution
-        ...
+        return self._storage.data[index]
 
     def __setitem__(self, index: int, value: Any) -> None:
         """
         Записує значення за індексом.
         Якщо буфер спільний - створює власну копію перед записом.
         """
-        # TODO: implement solution
-        ...
+        self._ensure_own_copy()
+
+        self._storage.data[index] = value
 
     def __delitem__(self, index: int) -> None:
         """
         Видаляє елемент.
         Перед операцією може знадобитися відʼєднати власний буфер.
         """
-        # TODO: implement solution
-        ...
+        self._ensure_own_copy()
+
+        del self._storage.data[index]
 
     def insert(self, index: int, value: Any) -> None:
         """
         Вставляє новий елемент за індексом.
         При спільному буфері створює власну копію перед модифікацією.
         """
-        # TODO: implement solution
-        ...
+        self._ensure_own_copy()
+
+        self._storage.data.insert(index, value)
 
     def append(self, value: Any) -> None:
         """
         Додає елемент у кінець масиву.
         Викликає відʼєднання буфера за потреби.
         """
-        # TODO: implement solution
-        ...
+        self._ensure_own_copy()
+
+        self._storage.data.append(value)
 
     def to_list(self) -> list[Any]:
         """
         Повертає новий звичайний Python-список.
         Це завжди реальна копія даних.
         """
-        # TODO: implement solution
-        ...
+        return list(self._storage.data)
 
     def __repr__(self) -> str:
         """
         Повертає зручне текстове представлення масиву для дебагу.
         Показує дані й стан буфера.
         """
-        # TODO: implement solution
-        ...
+        return f'refcount={self._storage.refcount}, data={self._storage.data}'
+
+    def _ensure_own_copy(self):
+        if self._storage.refcount > 1:
+            new_storage = Storage(self._storage.data.copy(), 1)
+            self._storage.refcount -= 1
+            self._storage = new_storage
