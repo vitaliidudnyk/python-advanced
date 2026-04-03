@@ -103,7 +103,7 @@ class MeasurementsAggregator:
         """
         Ініціалізує структуру для збереження статистики по станціях.
         """
-        self.stations_dict = {}
+        self.station_stats = {}
 
     @memory_profile
     def process_file(self, path: str) -> None:
@@ -112,7 +112,7 @@ class MeasurementsAggregator:
         """
         p = Path(path)
         with p.open('r', encoding='utf-8') as stream:
-            return self._process_stream(stream)
+            self._process_stream(stream)
 
     def _process_stream(self, stream: TextIO) -> None:
         """
@@ -122,13 +122,13 @@ class MeasurementsAggregator:
             <station>;<temperature>
         """
         for line in stream:
-            station, temperature_str = line.split(';')
+            station, temperature_str = line.split(';', 1)
             temperature = float(temperature_str)
 
-            if station in self.stations_dict:
-                self.stations_dict[station].add(temperature)
+            if station in self.station_stats:
+                self.station_stats[station].add(temperature)
             else:
-                self.stations_dict[station] = StationStats.create(temperature)
+                self.station_stats[station] = StationStats.create(temperature)
 
     def render_sorted(self) -> dict[str, str]:
         """
@@ -141,10 +141,10 @@ class MeasurementsAggregator:
         - повернути словник:
               station -> "min_value/mean/max_value"
         """
-        sorted_keys = sorted(self.stations_dict.keys())
+        sorted_keys = sorted(self.station_stats.keys())
         stations_ret = {}
         for key in sorted_keys:
-            stats = self.stations_dict[key]
+            stats = self.station_stats[key]
             stations_ret[key] = f'{stats.min_value:.1f}/{stats.mean():.1f}/{stats.max_value:.1f}'
 
         return stations_ret

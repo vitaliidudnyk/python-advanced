@@ -21,11 +21,28 @@
 
 import json
 
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Iterator
 
 from memory.fragments_and_copies.homework import fake_boto3
 from memory.fragments_and_copies.homework.memory_profiler import memory_profile
+
+
+@dataclass(slots=True)
+class NormalizedEven:
+    user_id: str
+    event: str
+    value: float | None
+    timestamp: float
+    extra: dict[str, Any] | None
+
+
+@dataclass(slots=True)
+class PayloadUserEvents:
+    user: str
+    count: int
+    events: list[NormalizedEven]
 
 
 class EventAggregator:  # <- Залиш назву незмінною
@@ -36,36 +53,46 @@ class EventAggregator:  # <- Залиш назву незмінною
         self.s3 = fake_boto3.client('s3')
 
     @memory_profile
-    def run(self) -> list[dict]:  # <- метод run має бути наявним у класі, вміст можна змінювати за потреби
-        payload: list[Any] = []
-        event_by_user: dict[str, list[dict]] = {}
+    def run(self) -> list[PayloadUserEvents]:  # <- метод run має бути наявним у класі, вміст можна змінювати за потреби
+        event_by_user: dict[str, list[NormalizedEven]] = {}
+        for norm_event in self._iter_normalized_even():
+            if norm_event.user_id not in event_by_user:
+                event_by_user[norm_event.user_id] = [norm_event]
+            else:
+                event_by_user[norm_event.user_id].append(norm_event)
 
+        return list(self._iter_payload(event_by_user))
+
+    def _iter_raw_events(self) -> Iterator[dict]:
         objects = self.s3.list_objects_v2(
             Bucket=self.bucket,
             Prefix=self.prefix,
         )['Contents']
+
         for obj in objects:
             raw = self.s3.get_object(
                 Bucket=self.bucket,
                 Key=obj['Key'],
             )['Body'].read()
+
             for event in json.loads(raw):
-                user_id = event['user_id']
+                yield event
 
-                normalized_event = {
-                    'user_id': user_id,
-                    'event': event['event'],
-                    'value': event.get('value'),
-                    'timestamp': datetime.fromisoformat(event['timestamp']).timestamp(),
-                    'extra': {},
-                }
+    def _iter_normalized_even(self) -> Iterator[NormalizedEven]:
+        for event in self._iter_raw_events():
+            yield NormalizedEven(
+                event['user_id'],
+                event['event'],
+                event.get('value'),
+                datetime.fromisoformat(event['timestamp']).timestamp(),
+                None,
+            )
 
-                if user_id not in event_by_user:
-                    event_by_user[user_id] = [normalized_event]
-                else:
-                    event_by_user[user_id].append(normalized_event)
-
-        for user, events in event_by_user.items():
-            payload.append({'user': user, 'count': len(events), 'events': events})
-
-        return payload
+    @staticmethod
+    def _iter_payload(users: dict[str, list[NormalizedEven]]) -> Iterator[PayloadUserEvents]:
+        for user, events in users.items():
+            yield PayloadUserEvents(
+                user,
+                len(events),
+                events,
+            )

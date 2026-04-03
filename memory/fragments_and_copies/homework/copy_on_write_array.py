@@ -63,8 +63,6 @@ class CopyOnWriteArray:
         """
         if items is None:
             data: list[Any] = []
-        elif isinstance(items, list):
-            data = items
         else:
             data = list(items)
 
