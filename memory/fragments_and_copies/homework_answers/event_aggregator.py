@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable, Iterator, TypedDict
 
 from memory.fragments_and_copies.homework_answers import fake_boto3
 
@@ -15,6 +15,13 @@ class NormalizedEvent:
     value: Any
     timestamp: float
     extra: dict
+
+
+class UserEventsGroup(TypedDict):
+    events: list[NormalizedEvent]
+
+
+MergedEvents = dict[str, UserEventsGroup]
 
 
 class EventAggregator:
@@ -55,16 +62,15 @@ class EventAggregator:
             yield normalized_event
 
     @staticmethod
-    def merge_by_user(events: Iterable[NormalizedEvent]) -> dict:
-        merged: defaultdict[str, dict] = defaultdict(lambda: {'events': []})
-
+    def merge_by_user(events: Iterable[NormalizedEvent]) -> MergedEvents:
+        merged: defaultdict[str, UserEventsGroup] = defaultdict(lambda: {'events': []})
         for event in events:
             merged[event.user_id]['events'].append(event)
 
         return dict(merged)
 
     @staticmethod
-    def build_payload(merged: dict[str, list[NormalizedEvent]]) -> Iterator[dict[str, Any]]:
+    def build_payload(merged: MergedEvents) -> Iterator[dict[str, Any]]:
         for user, user_events in merged.items():
             yield {
                 'user': user,
