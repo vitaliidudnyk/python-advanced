@@ -72,8 +72,17 @@ class ByteSlice:
         Має створювати memoryview(data) та зберігати тільки вказівники.
         Не повинно бути жодних копій даних.
         """
-        # TODO: implement solution
-        ...
+        if isinstance(data, memoryview):
+            self._buffer = data
+        else:
+            self._buffer = memoryview(data)
+
+        self._start = start
+
+        if end is None:
+            self._end = len(data)
+        else:
+            self._end = end
 
     def __len__(self) -> int:
         """
@@ -81,8 +90,7 @@ class ByteSlice:
 
         Має бути O(1).
         """
-        # TODO: implement solution
-        ...
+        return self._end - self._start
 
     def __getitem__(self, item: int | slice) -> int | ByteSlice:
         """
@@ -96,8 +104,25 @@ class ByteSlice:
 
         Заборонено робити копії bytes.
         """
-        # TODO: implement solution
-        ...
+        if isinstance(item, slice):
+            start, stop, step = item.indices(len(self))
+
+            if step != 1:
+                raise ValueError('slice step is not supported')
+
+            return ByteSlice(
+                self._buffer,
+                self._start + start,
+                self._start + stop,
+            )
+        else:
+            if item < 0:
+                item += len(self)
+
+            if item < 0 or item >= len(self):
+                raise IndexError('index out of range')
+
+            return self._buffer[item + self._start]
 
     def __iter__(self) -> Iterator[int]:
         """
@@ -105,8 +130,7 @@ class ByteSlice:
 
         Повертати int для кожного байта.
         """
-        # TODO: implement solution
-        ...
+        yield from self._buffer[self._start : self._end]
 
     def __bytes__(self) -> bytes:
         """
@@ -114,8 +138,7 @@ class ByteSlice:
 
         Єдиний дозволений спосіб створення bytes-обʼєкта всередині класу.
         """
-        # TODO: implement solution
-        ...
+        return bytes(self._buffer[self._start : self._end])
 
     def to_bytes(self) -> bytes:
         """
@@ -123,13 +146,11 @@ class ByteSlice:
 
         Можна викликати руками - повинен повертати копію вмісту ByteSlice.
         """
-        # TODO: implement solution
-        ...
+        return bytes(self)
 
     def __repr__(self) -> str:
         """
         Повернути зручне текстове представлення.
         Має бути корисно для дебагу.
         """
-        # TODO: implement solution
-        ...
+        return f'preview=ByteSlice(start={self._start}, ' f'end={self._end}, ' f'len={len(self)})'

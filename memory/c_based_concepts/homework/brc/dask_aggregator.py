@@ -58,6 +58,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import dask.dataframe as dd
+
 
 @dataclass(slots=True)
 class StationStats:
@@ -70,8 +72,7 @@ class StationStats:
         """
         Повертає середнє значення температури.
         """
-        # TODO: implement solution
-        ...
+        return self.sum_value / self.count
 
 
 class DaskMeasurementsAggregator:
@@ -80,8 +81,8 @@ class DaskMeasurementsAggregator:
         Ініціалізує агрегатор.
         chunk_size: розмір partition для читання CSV.
         """
-        # TODO: implement solution
-        ...
+        self._chunk_size = chunk_size
+        self._stats: dict[str, StationStats] = {}
 
     def process_file(self, path: Path) -> None:
         """
@@ -91,8 +92,30 @@ class DaskMeasurementsAggregator:
         2. Виконати агрегацію df.groupby;
         3. Викликати compute(), щоб отримати pandas DataFrame.
         """
-        # TODO: implement solution
-        ...
+        df = dd.read_csv(
+            path,
+            sep=';',
+            names=['station', 'temperature'],
+            dtype={'station': 'string', 'temperature': 'float64'},
+            blocksize=self._chunk_size,
+            engine='pyarrow',
+        )
+
+        agg = df.groupby('station').agg(
+            {
+                'temperature': ['min', 'max', 'sum', 'count'],
+            }
+        )
+
+        stats_df = agg.compute()
+        for station, row in stats_df.iterrows():
+            stats = StationStats(
+                row[('temperature', 'min')],
+                row[('temperature', 'max')],
+                row[('temperature', 'sum')],
+                row[('temperature', 'count')],
+            )
+            self._stats[station] = stats
 
     def render_sorted(self) -> dict[str, str]:
         """
@@ -102,8 +125,13 @@ class DaskMeasurementsAggregator:
             - обчислити mean через StationStats.mean();
             - сформувати рядок "min_value/mean/max_value".
         """
-        # TODO: implement solution
-        ...
+
+        result = {}
+        for station in sorted(self._stats.keys()):
+            stats = self._stats[station]
+            result[station] = f'{stats.min_value:.1f}/{stats.mean():.1f}/{stats.max_value:.1f}'
+
+        return result
 
 
 def main():
