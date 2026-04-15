@@ -56,7 +56,6 @@ Billion Row Challenge - реалізація на Pandas
 
 from __future__ import annotations
 
-import cProfile
 import time
 
 from dataclasses import dataclass
@@ -65,6 +64,8 @@ from pathlib import Path
 import pandas as pd
 
 from pandas import DataFrame
+
+from memory.fragments_and_copies.homework.memory_profiler import memory_profile
 
 
 @dataclass(slots=True)
@@ -99,7 +100,7 @@ class PandasMeasurementsAggregator:
         3. Об'єднати всі partial results через pd.concat().
         4. Виконати фінальну агрегацію groupby(level=0).
         """
-        chunks = pd.read_csv(
+        chunks1 = pd.read_csv(
             filepath_or_buffer=path,
             sep=';',
             chunksize=self._chunk_size,
@@ -109,15 +110,35 @@ class PandasMeasurementsAggregator:
             header=None,
         )
 
-        cProfile.run('self.concat_one_dataframe(chunks)')
-        cProfile.run('self.concat_many_dataframe(chunks)')
+        chunks2 = pd.read_csv(
+            filepath_or_buffer=path,
+            sep=';',
+            chunksize=self._chunk_size,
+            names=['station', 'temperature'],
+            dtype={'station': 'string', 'temperature': 'float64'},
+            engine='c',
+            header=None,
+        )
 
-        df_group = self.concat_many_dataframe(chunks)
+        # cProfile.runctx(
+        #     'self.concat_one_dataframe(chunks1)',
+        #     globals(),
+        #     locals(),
+        # )
+        #
+        # cProfile.runctx(
+        #     'self.concat_many_dataframe(chunks2)',
+        #     globals(),
+        #     locals(),
+        # )
 
-        if df_group is None:
+        df_group1 = self.concat_one_dataframe(chunks1)
+        df_group2 = self.concat_many_dataframe(chunks2)
+
+        if df_group2 is None:
             return
 
-        for station, row in df_group.to_dict('index').items():
+        for station, row in df_group1.to_dict('index').items():
             self._stats[station] = StationStats(
                 row['min'],
                 row['max'],
@@ -125,6 +146,7 @@ class PandasMeasurementsAggregator:
                 row['count'],
             )
 
+    @memory_profile
     def concat_one_dataframe(self, chunks: DataFrame) -> DataFrame:
         df_group: DataFrame = None
         for chunk in chunks:
@@ -144,7 +166,7 @@ class PandasMeasurementsAggregator:
                 )
         return df_group
 
-    # @memory_profile
+    @memory_profile
     def concat_many_dataframe(self, chunks: DataFrame) -> DataFrame:
         partials: list[pd.DataFrame] = []
         for chunk in chunks:
