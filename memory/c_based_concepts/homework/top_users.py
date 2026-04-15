@@ -39,7 +39,22 @@
     памʼяті в десятки разів і зробити задачу взагалі виконуваною.
 """
 
+import heapq
 
-def top_users(file_path: str, top_n: int = 5):
-    # TODO: implement solution
-    ...
+
+def top_users(file_path: str, top_n: int = 5) -> list[tuple[str, float]]:
+    totals: dict[str, float] = {}
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line.rsplit('\n')
+            parts = line.split(',')
+            if len(parts) != 4:
+                continue
+
+            try:
+                value = float(parts[3])
+                totals[parts[1]] = totals.get(parts[1], 0) + value
+            except ValueError:
+                continue
+
+    return heapq.nlargest(top_n, totals.items(), key=lambda x: x[1])

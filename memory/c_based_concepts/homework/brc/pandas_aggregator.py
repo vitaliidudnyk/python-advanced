@@ -61,6 +61,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+
+from pandas import DataFrame
+
+from memory.fragments_and_copies.homework.memory_profiler import memory_profile
+
 
 @dataclass(slots=True)
 class StationStats:
@@ -73,8 +79,7 @@ class StationStats:
         """
         Повертає середнє значення температури.
         """
-        # TODO: implement solution
-        ...
+        return self.sum_value / self.count
 
 
 class PandasMeasurementsAggregator:
@@ -83,8 +88,8 @@ class PandasMeasurementsAggregator:
         Ініціалізує агрегатор.
         chunk_size: кількість рядків, які читаються за один chunk.
         """
-        # TODO: implement solution
-        ...
+        self._stats: dict[str, StationStats] = {}
+        self._chunk_size = chunk_size
 
     def process_file(self, path: Path) -> None:
         """
@@ -95,8 +100,93 @@ class PandasMeasurementsAggregator:
         3. Об'єднати всі partial results через pd.concat().
         4. Виконати фінальну агрегацію groupby(level=0).
         """
-        # TODO: implement solution
-        ...
+        chunks1 = pd.read_csv(
+            filepath_or_buffer=path,
+            sep=';',
+            chunksize=self._chunk_size,
+            names=['station', 'temperature'],
+            dtype={'station': 'string', 'temperature': 'float64'},
+            engine='c',
+            header=None,
+        )
+
+        chunks2 = pd.read_csv(
+            filepath_or_buffer=path,
+            sep=';',
+            chunksize=self._chunk_size,
+            names=['station', 'temperature'],
+            dtype={'station': 'string', 'temperature': 'float64'},
+            engine='c',
+            header=None,
+        )
+
+        # cProfile.runctx(
+        #     'self.concat_one_dataframe(chunks1)',
+        #     globals(),
+        #     locals(),
+        # )
+        #
+        # cProfile.runctx(
+        #     'self.concat_many_dataframe(chunks2)',
+        #     globals(),
+        #     locals(),
+        # )
+
+        df_group1 = self.concat_one_dataframe(chunks1)
+        df_group2 = self.concat_many_dataframe(chunks2)
+
+        if df_group2 is None:
+            return
+
+        for station, row in df_group1.to_dict('index').items():
+            self._stats[station] = StationStats(
+                row['min'],
+                row['max'],
+                row['sum'],
+                row['count'],
+            )
+
+    @memory_profile
+    def concat_one_dataframe(self, chunks: DataFrame) -> DataFrame:
+        df_group: DataFrame = None
+        for chunk in chunks:
+            partial = chunk.groupby('station')['temperature'].agg(['min', 'max', 'sum', 'count'])
+
+            if df_group is None:
+                df_group = partial
+            else:
+                combined = pd.concat([df_group, partial])
+                df_group = combined.groupby(level=0).agg(
+                    {
+                        'min': 'min',
+                        'max': 'max',
+                        'sum': 'sum',
+                        'count': 'sum',
+                    }
+                )
+        return df_group
+
+    @memory_profile
+    def concat_many_dataframe(self, chunks: DataFrame) -> DataFrame:
+        partials: list[pd.DataFrame] = []
+        for chunk in chunks:
+            partial = chunk.groupby('station')['temperature'].agg(['min', 'max', 'sum', 'count'])
+            partials.append(partial)
+
+        if not partials:
+            return None
+
+        combined = pd.concat(partials)
+        df_group = combined.groupby(level=0).agg(
+            {
+                'min': 'min',
+                'max': 'max',
+                'sum': 'sum',
+                'count': 'sum',
+            }
+        )
+
+        return df_group
 
     def render_sorted(self) -> dict[str, str]:
         """
@@ -106,8 +196,13 @@ class PandasMeasurementsAggregator:
             - порахувати mean через StationStats.mean();
             - сформувати рядок "min_value/mean/max_value".
         """
-        # TODO: implement solution
-        ...
+
+        result = {}
+        for station in sorted(self._stats.keys()):
+            stat = self._stats[station]
+            result[station] = f'{stat.min_value:.1f}/{stat.mean():.1f}/{stat.max_value:.1f}'
+
+        return result
 
 
 def main():
