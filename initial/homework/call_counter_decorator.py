@@ -43,9 +43,18 @@
     2
 """
 
-from typing import Callable
+from typing import Any, Callable, cast
 
 
 def call_counter(func: Callable) -> Callable:
-    # TODO: implement decorator using local variable `calls` and expose count via `.calls`
-    ...
+    calls = 0
+
+    def wrapper(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        cast(Any, wrapper).calls = calls
+        result = func(*args, **kwargs)
+        return result
+
+    cast(Any, wrapper).calls = 0
+    return wrapper

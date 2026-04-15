@@ -45,13 +45,37 @@
 
 class Allocator:
     def __init__(self, n: int):
-        # TODO: implement solution
-        ...
+        self.memory_len = n
+        self.memory = [0] * n
 
     def allocate(self, size: int, alloc_id: int) -> int:
-        # TODO: implement solution
-        ...
+        start = self.try_find_memory(size)
+        if start == -1:
+            return -1
+
+        for i in range(start, size + start):
+            self.memory[i] = alloc_id
+        return start
+
+    def try_find_memory(self, size: int) -> int:
+        start = -1
+        for i in range(self.memory_len):
+            if self.memory[i] == 0:
+                if start == -1:
+                    start = i
+
+                if i - start + 1 >= size:
+                    return start
+            else:
+                start = -1
+
+        return -1
 
     def free_memory(self, alloc_id: int) -> int:
-        # TODO: implement solution
-        ...
+        freed = 0
+        for i in range(self.memory_len):
+            if self.memory[i] == alloc_id:
+                self.memory[i] = 0
+                freed += 1
+
+        return freed

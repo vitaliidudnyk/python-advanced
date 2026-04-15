@@ -36,5 +36,20 @@
 
 
 def binary_search(data: list[int], target: int) -> int:
-    # TODO: implement binary search
-    ...
+    """
+    1. O(log n), each iteration we divide the search
+    2. O(1), use only constants
+    """
+    good = -1
+    bad = len(data)
+
+    while bad - good > 1:
+        mid = (good + bad) // 2
+        if data[mid] > target:
+            bad = mid
+        elif data[mid] < target:
+            good = mid
+        else:
+            return mid
+
+    return -1

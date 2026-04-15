@@ -43,5 +43,16 @@
 
 
 def simulate_memory_leak(memory1: int, memory2: int) -> list[int]:
-    # TODO: implement solution
-    ...
+    free_mem1 = memory1
+    free_mem2 = memory2
+    req_bytes = 1
+
+    while max(free_mem1, free_mem2) >= req_bytes:
+        if free_mem1 >= free_mem2:
+            free_mem1 -= req_bytes
+        else:
+            free_mem2 -= req_bytes
+
+        req_bytes += 1
+
+    return [req_bytes, free_mem1, free_mem2]
