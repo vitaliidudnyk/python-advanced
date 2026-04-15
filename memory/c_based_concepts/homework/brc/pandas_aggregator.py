@@ -56,6 +56,7 @@ Billion Row Challenge - реалізація на Pandas
 
 from __future__ import annotations
 
+import cProfile
 import time
 
 from dataclasses import dataclass
@@ -63,7 +64,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pandas.core.groupby import DataFrameGroupBy
+from pandas import DataFrame
 
 
 @dataclass(slots=True)
@@ -105,9 +106,27 @@ class PandasMeasurementsAggregator:
             names=['station', 'temperature'],
             dtype={'station': 'string', 'temperature': 'float64'},
             engine='c',
+            header=None,
         )
 
-        df_group: DataFrameGroupBy = None
+        cProfile.run('self.concat_one_dataframe(chunks)')
+        cProfile.run('self.concat_many_dataframe(chunks)')
+
+        df_group = self.concat_many_dataframe(chunks)
+
+        if df_group is None:
+            return
+
+        for station, row in df_group.to_dict('index').items():
+            self._stats[station] = StationStats(
+                row['min'],
+                row['max'],
+                row['sum'],
+                row['count'],
+            )
+
+    def concat_one_dataframe(self, chunks: DataFrame) -> DataFrame:
+        df_group: DataFrame = None
         for chunk in chunks:
             partial = chunk.groupby('station')['temperature'].agg(['min', 'max', 'sum', 'count'])
 
@@ -123,14 +142,29 @@ class PandasMeasurementsAggregator:
                         'count': 'sum',
                     }
                 )
+        return df_group
 
-        for station, row in df_group.to_dict('index').items():
-            self._stats[station] = StationStats(
-                row['min'],
-                row['max'],
-                row['sum'],
-                row['count'],
-            )
+    # @memory_profile
+    def concat_many_dataframe(self, chunks: DataFrame) -> DataFrame:
+        partials: list[pd.DataFrame] = []
+        for chunk in chunks:
+            partial = chunk.groupby('station')['temperature'].agg(['min', 'max', 'sum', 'count'])
+            partials.append(partial)
+
+        if not partials:
+            return None
+
+        combined = pd.concat(partials)
+        df_group = combined.groupby(level=0).agg(
+            {
+                'min': 'min',
+                'max': 'max',
+                'sum': 'sum',
+                'count': 'sum',
+            }
+        )
+
+        return df_group
 
     def render_sorted(self) -> dict[str, str]:
         """

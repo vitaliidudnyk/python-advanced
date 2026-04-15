@@ -130,7 +130,8 @@ class ByteSlice:
 
         Повертати int для кожного байта.
         """
-        yield from self._buffer[self._start : self._end]
+        for i in range(self._start, self._end):
+            yield self._buffer[i]
 
     def __bytes__(self) -> bytes:
         """

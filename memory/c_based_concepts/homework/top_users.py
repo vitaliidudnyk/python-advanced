@@ -42,7 +42,7 @@
 import heapq
 
 
-def top_users(file_path: str, top_n: int = 5):
+def top_users(file_path: str, top_n: int = 5) -> list[tuple[str, float]]:
     totals: dict[str, float] = {}
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
@@ -51,8 +51,10 @@ def top_users(file_path: str, top_n: int = 5):
             if len(parts) != 4:
                 continue
 
-            value = float(parts[3])
-            if isinstance(value, float):
+            try:
+                value = float(parts[3])
                 totals[parts[1]] = totals.get(parts[1], 0) + value
+            except ValueError:
+                continue
 
-        return heapq.nlargest(top_n, totals.items(), key=lambda x: x[1])
+    return heapq.nlargest(top_n, totals.items(), key=lambda x: x[1])

@@ -99,21 +99,18 @@ class DaskMeasurementsAggregator:
             dtype={'station': 'string', 'temperature': 'float64'},
             blocksize=self._chunk_size,
             engine='pyarrow',
+            header=None,
         )
 
-        agg = df.groupby('station').agg(
-            {
-                'temperature': ['min', 'max', 'sum', 'count'],
-            }
-        )
+        agg = df.groupby('station')['temperature'].agg(['min', 'max', 'sum', 'count'])
 
         stats_df = agg.compute()
         for station, row in stats_df.iterrows():
             stats = StationStats(
-                row[('temperature', 'min')],
-                row[('temperature', 'max')],
-                row[('temperature', 'sum')],
-                row[('temperature', 'count')],
+                row['min'],
+                row['max'],
+                row['sum'],
+                row['count'],
             )
             self._stats[station] = stats
 
