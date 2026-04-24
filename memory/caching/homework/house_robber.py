@@ -27,22 +27,49 @@ from typing import Iterable
 class HouseRobberMemoized:
     """House Robber - рекурсія + мемоізація (Top-Down Dynamic Programming)."""
 
+    def __init__(self):
+        self.cache = None
+
     def rob(self, nums: Iterable[int]) -> int:
-        # TODO: implement solution
-        ...
+        self.cache = {}
+        list_nums = list(nums)
+        return self.best(list_nums, 0)
+
+    def best(self, nums: list[int], idx: int) -> int:
+        if idx >= len(nums):
+            return 0
+
+        if idx in self.cache:
+            return self.cache[idx]
+
+        max_val = max(nums[idx] + self.best(nums, idx + 2), self.best(nums, idx + 1))
+        self.cache[idx] = max_val
+        return max_val
 
 
 class HouseRobberTabulated:
     """House Robber - табуляція (Bottom-Up Dynamic Programming)."""
 
     def rob(self, nums: Iterable[int]) -> int:
-        # TODO: implement solution
-        ...
+        dp: list[int] = [0] * 2
+        idx = 2
+        for num in nums:
+            max_val = max(dp[idx - 1], dp[idx - 2] + num)
+            dp.append(max_val)
+            idx += 1
+
+        return dp[idx - 1]
 
 
 class HouseRobberOptimized:
     """House Robber - оптимізована табуляція з O(1) памʼяттю. Опціонально"""
 
     def rob(self, nums: Iterable[int]) -> int:
-        # TODO: implement solution
-        ...
+        max_sum1 = 0
+        max_sum2 = 0
+        for num in nums:
+            max_sum3 = max(max_sum2, max_sum1 + num)
+            max_sum1 = max_sum2
+            max_sum2 = max_sum3
+
+        return max_sum2

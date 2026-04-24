@@ -40,15 +40,83 @@
 """
 
 
+class Node:
+    def __init__(self, key: int, value: int):
+        self.key = key
+        self.value = value
+        self.prev: Node | None = None
+        self.next: Node | None = None
+
+
 class LRUCache:
     def __init__(self, capacity: int):
-        # TODO: implement solution
-        ...
+        self._cache: dict[int, Node] = {}
+        self._capacity = capacity
+        self._head: Node | None = None
+        self._tail: Node | None = None
 
     def get(self, key: int) -> int:
-        # TODO: implement solution
-        ...
+        if key in self._cache:
+            node = self._cache[key]
+            self._move_to_head(node)
+            return self._cache[key].value
+        else:
+            return -1
 
     def put(self, key: int, value: int) -> None:
-        # TODO: implement solution
-        ...
+        if key in self._cache:
+            node = self._cache[key]
+            self._move_to_head(node)
+            self._cache[key].value = value
+        else:
+            node = Node(key, value)
+            self._add_to_head(node, value)
+            if len(self._cache) > self._capacity:
+                self._remove_tail()
+
+    def _remove_tail(self) -> None:
+        if self._tail is None:
+            return
+
+        self._cache.pop(self._tail.key)
+        if self._head is self._tail:
+            self._head = None
+            self._tail = None
+            return
+
+        self._tail = self._tail.prev
+
+        if self._tail is not None:
+            self._tail.next = None
+
+    def _add_to_head(self, node: Node, value: int) -> None:
+        self._cache[node.key] = node
+
+        if self._head is None:
+            self._head = self._tail = node
+        else:
+            self._head.prev = node
+            node.next = self._head
+            self._head = node
+
+    def _move_to_head(self, node: Node) -> None:
+        if node is self._head:
+            return
+
+        if node is self._tail:
+            self._tail = node.prev
+            if self._tail is not None:
+                self._tail.next = None
+        else:
+            prev_node = node.prev
+            if prev_node is not None:
+                prev_node.next = node.next
+            next_node = node.next
+            if next_node is not None:
+                next_node.prev = node.prev
+
+        if self._head is not None:
+            self._head.prev = node
+        node.next = self._head
+        node.prev = None
+        self._head = node

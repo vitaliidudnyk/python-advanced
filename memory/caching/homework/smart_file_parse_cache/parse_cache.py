@@ -79,8 +79,7 @@ class CacheStats:
         Формула:
             hits + misses
         """
-        # TODO: implement solution
-        ...
+        return self.hits + self.misses
 
     @property
     def hit_rate(self) -> float:
@@ -91,8 +90,10 @@ class CacheStats:
             - якщо звернень ще не було, повернути 0.0;
             - інакше обчислити hits / total_requests.
         """
-        # TODO: implement solution
-        ...
+        if self.total_requests == 0:
+            return 0.0
+
+        return self.hits / self.total_requests
 
 
 @dataclass(slots=True)
@@ -137,8 +138,7 @@ class FileParseCache:
         """
         Повертає кількість записів у кеші.
         """
-        # TODO: implement solution
-        ...
+        return len(self._entries)
 
     def get(self, path: Path) -> Any:
         """
@@ -153,29 +153,41 @@ class FileParseCache:
             - якщо fingerprint змінився -> refresh;
             - у випадку miss або refresh викликати parser(path) і оновити кеш.
         """
-        # TODO: implement solution
-        ...
+        resolved_path = path.resolve()
+        finger_print = self._build_fingerprint(resolved_path)
+        if resolved_path in self._entries:
+            if self._entries[resolved_path].fingerprint == finger_print:
+                self._stats.hits += 1
+            else:
+                self._stats.refreshes += 1
+                value = self._parser(resolved_path)
+                self._entries[resolved_path] = _CacheEntry(finger_print, value)
+        else:
+            self._stats.misses += 1
+            value = self._parser(resolved_path)
+            self._entries[resolved_path] = _CacheEntry(finger_print, value)
+
+        return self._entries[resolved_path].value
 
     def contains(self, path: Path) -> bool:
         """
         Перевіряє, чи є файл у кеші.
         """
-        # TODO: implement solution
-        ...
+        resolved_path = path.resolve()
+        return resolved_path in self._entries
 
     def invalidate(self, path: Path) -> None:
         """
         Видаляє один запис із кешу вручну.
         """
-        # TODO: implement solution
-        ...
+        resolved_path = path.resolve()
+        self._entries.pop(resolved_path, None)
 
     def clear(self) -> None:
         """
         Повністю очищає кеш.
         """
-        # TODO: implement solution
-        ...
+        self._entries.clear()
 
     @staticmethod
     def _build_fingerprint(path: Path) -> FileFingerprint:
@@ -188,8 +200,8 @@ class FileParseCache:
             - взяти розмір файлу;
             - повернути FileFingerprint.
         """
-        # TODO: implement solution
-        ...
+        stats = path.stat()
+        return FileFingerprint(stats.st_mtime_ns, stats.st_size)
 
 
 def parse_json_file(path: Path) -> dict:
