@@ -72,4 +72,4 @@ class HouseRobberOptimized:
             max_sum1 = max_sum2
             max_sum2 = max_sum3
 
-        return max(max_sum1, max_sum2)
+        return max_sum2

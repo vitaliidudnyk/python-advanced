@@ -40,29 +40,38 @@
 """
 
 
+class Node:
+    def __init__(self, key: int, value: int):
+        self.key = key
+        self.value = value
+        self.prev: Node | None = None
+        self.next: Node | None = None
+
+
 class LRUCache:
     def __init__(self, capacity: int):
         self._cache: dict[int, Node] = {}
         self._capacity = capacity
         self._head: Node | None = None
         self._tail: Node | None = None
-        self._size: int = 0
 
     def get(self, key: int) -> int:
         if key in self._cache:
-            self._move_to_head(key)
+            node = self._cache[key]
+            self._move_to_head(node)
             return self._cache[key].value
         else:
             return -1
 
     def put(self, key: int, value: int) -> None:
         if key in self._cache:
-            self._move_to_head(key)
+            node = self._cache[key]
+            self._move_to_head(node)
             self._cache[key].value = value
         else:
-            self._add_to_head(key, value)
-            self._size += 1
-            if self._size > self._capacity:
+            node = Node(key, value)
+            self._add_to_head(node, value)
+            if len(self._cache) > self._capacity:
                 self._remove_tail()
 
     def _remove_tail(self) -> None:
@@ -70,7 +79,6 @@ class LRUCache:
             return
 
         self._cache.pop(self._tail.key)
-        self._size -= 1
         if self._head is self._tail:
             self._head = None
             self._tail = None
@@ -81,9 +89,8 @@ class LRUCache:
         if self._tail is not None:
             self._tail.next = None
 
-    def _add_to_head(self, key: int, value: int) -> None:
-        node = Node(key, value)
-        self._cache[key] = node
+    def _add_to_head(self, node: Node, value: int) -> None:
+        self._cache[node.key] = node
 
         if self._head is None:
             self._head = self._tail = node
@@ -92,9 +99,7 @@ class LRUCache:
             node.next = self._head
             self._head = node
 
-    def _move_to_head(self, key) -> None:
-        node = self._cache[key]
-
+    def _move_to_head(self, node: Node) -> None:
         if node is self._head:
             return
 
@@ -115,11 +120,3 @@ class LRUCache:
         node.next = self._head
         node.prev = None
         self._head = node
-
-
-class Node:
-    def __init__(self, key: int, value: int):
-        self.key = key
-        self.value = value
-        self.prev: Node | None = None
-        self.next: Node | None = None
